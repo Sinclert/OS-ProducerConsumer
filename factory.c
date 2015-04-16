@@ -1,3 +1,10 @@
+/*
+ * Authors:
+ *
+ * Sinclert Perez (NIA: 100317201)
+ * Adrian Pappalardo (NIA: 100317950)
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "db_factory.h"
@@ -6,7 +13,7 @@
 #include <string.h>
 #include <factory.h>
 
-// You can add here more global variables
+/* Global variables */
 
 
 // Object that will be inserted into the belt
@@ -64,9 +71,6 @@ int init_factory(char *file){
 
   /* DOUBLE POINTER NEEDED TO PASS AN ONLY ARGUMENT TO THE INSERTION THREADS */
   int ** insertion_args = NULL;
-  // insertion_args [0] = &number_elements;
-  // insertion_args [1] = &number_modified_elements;
-  // insertion_args [2] = &number_modified_stock;
 
 
   if (file != NULL){
@@ -165,6 +169,7 @@ int init_factory(char *file){
 }
 
 
+
 /* Function that closes and free the resources used by the factory */
 int close_factory(){
 
@@ -207,8 +212,40 @@ int close_factory(){
 /* Function executed by the inserter thread which is in charge of inserting and updating */
 void * inserter(void * data){
 
-
   /* To be completed for concurrency */
+  int ID, stock;
+  int i = 0;
+  int error = 0;
+
+  // Creation of the elements
+  while (i < data[0]){
+    error = db_factory_create_element("Element", 1, &ID);
+
+    if (error != 0){
+      perror("Error when creating the elements");
+      return -1;
+    }
+
+    // If the "i" element needs to be updated, the stock passed as argument in "data[2]" is added
+    if (i < data[1]){
+      error = db_factory_get_stock(ID, &stock);
+
+      if (error != 0){
+        perror("Error when getting the stock of the elements");
+        return -1;
+      }
+
+      error = db_factory_update_stock(ID, (stock + data[2]));
+
+      if (error != 0){
+        perror("Error when updating the stock of the elements");
+        return -1;
+      }
+    }
+    
+    i++;
+  }
+
 
   printf("Exitting inserter thread\n");
   return 0;
