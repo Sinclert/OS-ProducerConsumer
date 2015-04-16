@@ -63,10 +63,10 @@ int init_factory(char *file){
 
 
   /* DOUBLE POINTER NEEDED TO PASS AN ONLY ARGUMENT TO THE INSERTION THREADS */
-  int ** insertion_args;
-  insertion_args [0] = &number_elements;
-  insertion_args [1] = &number_modified_elements;
-  insertion_args [2] = &number_modified_stock;
+  int ** insertion_args = NULL;
+  // insertion_args [0] = &number_elements;
+  // insertion_args [1] = &number_modified_elements;
+  // insertion_args [2] = &number_modified_stock;
 
 
   if (file != NULL){
@@ -132,13 +132,19 @@ int init_factory(char *file){
     /* CREATION OF THE THREADS */
 
     // Transporter thread creation
-    pthread_create (transporters, NULL, (void*) transporter, NULL); /* THE LAST PARAMETER HAS TO BE REVIEWED */
+    pthread_create (transporters, NULL, (void*) transporter, NULL);
 
     int j = 0;
 
     // Inserter threads creation
     while (j < number_inserters){
-      pthread_create ((j*sizeof(pthread_t) + inserters), NULL, (void*) inserter, NULL); /* THE LAST PARAMETER HAS TO BE REVIEWED */
+
+      // Each row of the "insertion_args" matrix stores the elements to create, modify and the stock to add of each thread
+      insertion_args[j][0] = number_elements[j];
+      insertion_args[j][1] = number_modified_elements[j];
+      insertion_args[j][2] = number_modified_stock[j];
+
+      pthread_create ((j*sizeof(pthread_t) + inserters), NULL, (void*) inserter, &insertion_args[j]);
       j++;
     }
 
@@ -175,11 +181,11 @@ int close_factory(){
   /* FINALIZATION OF THE THREADS */
 
   // Closing transporter thread
-  pthread_join (transporters, NULL); /* THE LAST PARAMETER HAS TO BE REVIEWED */
+  pthread_join ((pthread_t)transporters, NULL);
 
   // Closing inserters thread
   while (i < number_inserters){
-    pthread_join ((i*sizeof(pthread_t) + inserters), NULL); /* THE LAST PARAMETER HAS TO BE REVIEWED */
+    pthread_join ((pthread_t)(i*sizeof(pthread_t) + inserters), NULL);
     i++;
   }
 
@@ -187,7 +193,7 @@ int close_factory(){
 
   // Closing receivers thread
   while (i < number_receivers){
-    pthread_join ((i*sizeof(pthread_t) + receivers), NULL); /* THE LAST PARAMETER HAS TO BE REVIEWED */
+    pthread_join ((pthread_t)(i*sizeof(pthread_t) + receivers), NULL);
     i++;
   }
 
