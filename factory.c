@@ -13,17 +13,17 @@
 #include <string.h>
 #include "factory.h"
 
-/* Global variables */
+/* GLOBAL VARIABLES */
 
 
 // Object that will be inserted into the belt (belt)
 struct object{
-  int id;
-  char name [255];
+    int id;
+    char name [255];
 };
 
 
-struct object belt[MAX_BELT]; /* common belt for transporters and receivers */
+struct object belt[MAX_BELT]; /* Common belt for transporters and receivers */
 
 
 // Number of threads for transport
@@ -38,9 +38,9 @@ pthread_t * inserters;
 pthread_t * receivers;
 
 
-// Total number of elements to be transported
+// Total number of elements to be transported and already transported at a time
 int total_number = 0;
-
+int transported_elements = 0;
 
 
 int main(int argc, char ** argv){
@@ -49,7 +49,8 @@ int main(int argc, char ** argv){
 		init_factory(argv[1]);
 		close_factory();
 	}
-  else{
+
+  else {
 		perror("Invalid syntax: ./factory input_file ");
 		return 0;
 	}
@@ -185,18 +186,20 @@ int close_factory(){
 
   // Closing inserters thread
   while (i < number_inserters){
-    pthread_join ((pthread_t)(i*sizeof(pthread_t) + inserters), NULL);
-    i++;
+      pthread_join ((pthread_t)(i*sizeof(pthread_t) + inserters), NULL);
+      i++;
   }
 
   // Closing transporter thread
-  pthread_join ((pthread_t)transporters, NULL);
-  i = 0;
+  if (number_elements == transported_elements){
+      pthread_join ((pthread_t)transporters, NULL);
+  }
 
+  i = 0;
   // Closing receivers thread
   while (i < number_receivers){
-    pthread_join ((pthread_t)(i*sizeof(pthread_t) + receivers), NULL);
-    i++;
+      pthread_join ((pthread_t)(i*sizeof(pthread_t) + receivers), NULL);
+      i++;
   }
 
   return 0;
@@ -252,15 +255,69 @@ void * inserter(void * data){
 /* Function executed by the thread transporter */
 void * transporter(void){
 
-  // To be changed for concurrency
-  char * name = "Example";
-  int id = 0;
-  int number_elements = 0;
+  int status, stock;
+  char * name;
+  int ID = 0;
+  int error = 0;
+  int belt_elements = 0;
   int position = 0;
 
-  // To be printed when inserted in the belt (belt)
-  printf("Introducing element %d, %s in position [%d] with %d number of elements\n",id, name, position, number_elements);
-  printf("Exitting thread transporter\n");
+  while (ID < MAX_DATABASE){
+      error = db_get_ready_state(ID, &status);
+
+      if (error != 0){
+          perror("Error when checking the state of the elements");
+          return -1;
+      }
+
+      if (status == 1){
+          error = db_factory_get_stock(ID, &stock);
+
+          if (error != 0){
+            perror("Error when getting the stock of the elements");
+            return -1;
+          }
+
+          if (stock > 0){
+              error = db_factory_get_element_name(ID, &name);
+
+              if (error != 0){
+                  perror("Error when getting the name of the elements");
+                  return -1;
+              }
+
+              if (belt_elements < 7){
+
+                  /* CHECK THIS FOLLOWING LINE, THE CREATION OF THE OBJECT CAN BE WRONG
+                   * AND THE POSITION TO INTRODUCE THE NEW ELEMENT IS NEVER UPDATED,
+                   * HOW CAN WE KNOW THE FREED POSITION ??????
+                   */
+
+                  belt[position] = object (ID, name);
+                  error = db_factory_update_stock(ID, (stock -1));
+
+                  if (error != 0){
+                    perror("Error when updating the stock of the elements");
+                    return -1;
+                }
+
+                // To be printed when inserted in the belt
+                printf("Introducing element %d, %s in position [%d] with %d number of elements\n", ID, name, position, belt_elements);
+                printf("Exitting thread transporter\n");
+
+                belt_elements++;
+              }
+
+              else {
+
+                  /* HERE THE TRANSPORTER HAS TO WAIT FOR THE RECEIVER THREAD */
+
+              }
+          }
+      }
+
+      ID++;
+  }
 
   return 0;
 }
@@ -269,6 +326,12 @@ void * transporter(void){
 
 /* Function execute by the receiver thread */
 void * receiver(){
+
+  /* WE HAVE CREATED A VARIABLE CALLED "TRANSPORTED_ELEMENTS" TO CHECK WHEN THE
+   * ELEMENTS ALREADY TRANSPORTED ARE EQUAL TO THE TOTAL NUMBER OF ELEMENTS,
+   * ITS INCREMENT MUST BE DONE INSIDE THIS METHOD, DO - NOT - FORGET !!!!!!
+   */
+
 
   // To be changed for concurrency
   char * name = "Example";
