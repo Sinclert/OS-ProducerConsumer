@@ -13,8 +13,6 @@
 #include <string.h>
 #include "factory.h"
 
-/* GLOBAL VARIABLES */
-
 
 // Object that will be inserted into the belt (belt)
 struct object{
@@ -23,8 +21,9 @@ struct object{
 };
 
 
-struct object belt[MAX_BELT]; /* Common belt for transporters and receivers */
+/* GLOBAL VARIABLES */
 
+struct object belt[MAX_BELT]; /* Common belt for transporters and receivers */
 
 // Number of threads for transport
 int number_transporters = 0;
@@ -37,23 +36,32 @@ pthread_t * transporters;
 pthread_t * inserters;
 pthread_t * receivers;
 
-
 // Total number of elements to be transported and already transported at a time
 int total_number = 0;
+int belt_elements = 0;
 int transported_elements = 0;
+int received_elements = 0;
 
 
 int main(int argc, char ** argv){
 
-  if (argc == 2){
-		init_factory(argv[1]);
-		close_factory();
-	}
+  int data[3];
+  data[0] = 1;
+  data[1] = 1;
+  data[2] = 2;
+  inserter(data);
+  transporter();
+  receiver();
 
-  else {
-		perror("Invalid syntax: ./factory input_file ");
-		return 0;
-	}
+ //  if (argc == 2){
+	// 	init_factory(argv[1]);
+	// 	close_factory();
+	// }
+
+ //  else {
+	// 	perror("Invalid syntax: ./factory input_file ");
+	// 	return 0;
+	// }
 	
   exit(0);
 }
@@ -119,7 +127,7 @@ int init_factory(char *file){
     }
 
     // Total number of elements that will be in the database
-    for(i=0 ; i<number_inserters ; i++){
+    for (i=0 ; i<number_inserters ; i++){
       total_number += number_elements[i] + (number_modified_elements[i]*number_modified_stock[i]);
     }
 
@@ -191,9 +199,7 @@ int close_factory(){
   }
 
   // Closing transporter thread
-  if (number_elements == transported_elements){
-      pthread_join ((pthread_t)transporters, NULL);
-  }
+  pthread_join ((pthread_t)transporters, NULL);
 
   i = 0;
   // Closing receivers thread
@@ -259,10 +265,9 @@ void * transporter(void){
   char * name;
   int ID = 0;
   int error = 0;
-  int belt_elements = 0;
   int position = 0;
 
-  while (ID < MAX_DATABASE){
+  while (transported_elements < total_number){
       error = db_get_ready_state(ID, &status);
 
       if (error != 0){
@@ -279,7 +284,7 @@ void * transporter(void){
           }
 
           if (stock > 0){
-              error = db_factory_get_element_name(ID, &name);
+              error = db_factory_get_element_name(ID, name);
 
               if (error != 0){
                   perror("Error when getting the name of the elements");
@@ -288,35 +293,31 @@ void * transporter(void){
 
               if (belt_elements < 7){
 
-                  /* CHECK THIS FOLLOWING LINE, THE CREATION OF THE OBJECT CAN BE WRONG
-                   * AND THE POSITION TO INTRODUCE THE NEW ELEMENT IS NEVER UPDATED,
-                   * HOW CAN WE KNOW THE FREED POSITION ??????
-                   */
-
-                  belt[position] = object (ID, name);
-                  error = db_factory_update_stock(ID, (stock -1));
-
-                  if (error != 0){
-                    perror("Error when updating the stock of the elements");
-                    return -1;
-                }
-
-                // To be printed when inserted in the belt
-                printf("Introducing element %d, %s in position [%d] with %d number of elements\n", ID, name, position, belt_elements);
-                printf("Exitting thread transporter\n");
-
-                belt_elements++;
-              }
-
-              else {
 
                   /* HERE THE TRANSPORTER HAS TO WAIT FOR THE RECEIVER THREAD */
 
+                  ID = belt[position].id;
+                  name = belt[position].name;
+
+                  error = db_factory_update_stock(ID, (stock -1));
+
+                  if (error != 0){
+                      perror("Error when updating the stock of the elements");
+                      return -1;
+                  }
+
+                  // To be printed when inserted in the belt
+                  printf("Introducing element %d, %s in position [%d] with %d number of elements\n", ID, name, position, belt_elements);
+                  printf("Exitting thread transporter\n");
+
+                  belt_elements++;
+                  transported_elements++;
+                  position = (position+1) % MAX_BELT;
               }
           }
       }
 
-      ID++;
+      ID = (ID+1) % MAX_DATABASE;
   }
 
   return 0;
@@ -327,21 +328,27 @@ void * transporter(void){
 /* Function execute by the receiver thread */
 void * receiver(){
 
-  /* WE HAVE CREATED A VARIABLE CALLED "TRANSPORTED_ELEMENTS" TO CHECK WHEN THE
-   * ELEMENTS ALREADY TRANSPORTED ARE EQUAL TO THE TOTAL NUMBER OF ELEMENTS,
-   * ITS INCREMENT MUST BE DONE INSIDE THIS METHOD, DO - NOT - FORGET !!!!!!
-   */
-
-
-  // To be changed for concurrency
-  char * name = "Example";
-  int id = 0;
-  int number_elements = 0;
+  char * name;
+  int error = 0;
   int position = 0;
 
-  // To be printed when an element is received
-  printf("Element %d, %s has been received from position [%d] with %d number of elements\n",id, name, position, number_elements);
-  printf("Exitting thread receiver\n");
+  while (received_elements < total_number){
+
+      error = db_factory_get_element_name(belt[position].id, name);
+
+      if (error != 0){
+          perror("Error when getting the name of the elements");
+          return -1;
+      }
+
+      // To be printed when an element is received
+      printf("Element %d, %s has been received from position [%d] with %d number of elements\n", belt[position].id, name, position, belt_elements);
+      printf("Exitting thread receiver\n");
+
+      belt_elements--;
+      received_elements++;
+      position = (position+1) % 8;
+  }
 
   return 0;
 }
