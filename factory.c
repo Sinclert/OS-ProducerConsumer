@@ -22,6 +22,8 @@ struct object{
 
 
 /* GLOBAL VARIABLES */
+int error_number = -1;
+int correct_number = 0;
 
 struct object belt[MAX_BELT]; /* Common belt for transporters and receivers */
 
@@ -38,9 +40,9 @@ pthread_t * receivers;
 
 // Total number of elements to be transported and already transported at a time
 int total_number = 0;
+
+// Number of elements on the belt
 int belt_elements = 0;
-int transported_elements = 0;
-int received_elements = 0;
 
 
 int main(int argc, char ** argv){
@@ -222,7 +224,7 @@ void * inserter(void * data){
 
         if (error != 0){
             perror("Error when creating the elements");
-            pthread_exit(-1);
+            pthread_exit(&error_number);
         }
 
         // If the "i" element needs to be updated, the stock passed as argument in "data[2]" is added
@@ -231,14 +233,14 @@ void * inserter(void * data){
 
             if (error != 0){
                 perror("Error when getting the stock of the elements");
-                pthread_exit(-1);
+                pthread_exit(&error_number);
             }
 
             error = db_factory_update_stock(ID, (stock + data[2]));
 
             if (error != 0){
                 perror("Error when updating the stock of the elements");
-                pthread_exit(-1);
+                pthread_exit(&error_number);
             }
         }
     
@@ -246,7 +248,7 @@ void * inserter(void * data){
     }
 
     printf("Exitting inserter thread\n");
-    pthread_exit(0);
+    pthread_exit(&correct_number);
 }
 
 
@@ -259,13 +261,14 @@ void * transporter(void){
   int ID = 0;
   int error = 0;
   int position = 0;
+  int transported_elements = 0;
 
   while (transported_elements < total_number){
       error = db_get_ready_state(ID, &status);
 
       if (error != 0){
           perror("Error when checking the state of the elements");
-          pthread_exit(-1);
+          pthread_exit(&error_number);
       }
 
       if (status == 1){
@@ -273,7 +276,7 @@ void * transporter(void){
 
           if (error != 0){
               perror("Error when getting the stock of the elements");
-              pthread_exit(-1);
+              pthread_exit(&error_number);
           }
 
           if (stock > 0){
@@ -281,7 +284,7 @@ void * transporter(void){
 
               if (error != 0){
                   perror("Error when getting the name of the elements");
-                  pthread_exit(-1);
+                  pthread_exit(&error_number);
               }
 
               if (belt_elements < 7){
@@ -296,7 +299,7 @@ void * transporter(void){
 
                   if (error != 0){
                       perror("Error when updating the stock of the elements");
-                      pthread_exit(-1);
+                      pthread_exit(&error_number);
                   }
 
                   // To be printed when inserted in the belt
@@ -313,7 +316,7 @@ void * transporter(void){
       ID = (ID+1) % MAX_DATABASE;
   }
 
-  pthread_exit(0);
+  pthread_exit(&correct_number);
 }
 
 
@@ -324,6 +327,7 @@ void * receiver(){
   char * name;
   int error = 0;
   int position = 0;
+  int received_elements = 0;
 
   while (received_elements < total_number){
 
@@ -331,7 +335,7 @@ void * receiver(){
 
       if (error != 0){
           perror("Error when getting the name of the elements");
-          pthread_exit(-1);
+          pthread_exit(&error_number);
       }
 
       // To be printed when an element is received
@@ -343,5 +347,5 @@ void * receiver(){
       position = (position+1) % 8;
   }
 
-  pthread_exit(0);
+  pthread_exit(&correct_number);
 }
