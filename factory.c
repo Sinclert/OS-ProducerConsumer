@@ -20,12 +20,24 @@ struct object{
     char name [255];
 };
 
+// Common belt for transporters and receivers
+struct object belt[MAX_BELT];
+
 
 /* GLOBAL VARIABLES */
 int error_number = -1;
 int correct_number = 0;
 
-struct object belt[MAX_BELT]; /* Common belt for transporters and receivers */
+// Total number of elements to be transported and already transported at a time
+int total_number = 0;
+
+// Number of elements on the belt
+int belt_elements = 0;
+
+// Control variables to know where to exit a thread
+int transported_elements = 0;
+int received_elements = 0;
+
 
 // Number of threads for transport
 int number_transporters = 0;
@@ -37,12 +49,6 @@ int number_receivers = 0;
 pthread_t * transporters;
 pthread_t * inserters;
 pthread_t * receivers;
-
-// Total number of elements to be transported and already transported at a time
-int total_number = 0;
-
-// Number of elements on the belt
-int belt_elements = 0;
 
 
 int main(int argc, char ** argv){
@@ -261,7 +267,6 @@ void * transporter(void){
   int ID = 0;
   int error = 0;
   int position = 0;
-  int transported_elements = 0;
 
   while (transported_elements < total_number){
       error = db_get_ready_state(ID, &status);
@@ -271,6 +276,7 @@ void * transporter(void){
           pthread_exit(&error_number);
       }
 
+      // If the element is ready to be transported
       if (status == 1){
           error = db_factory_get_stock(ID, &stock);
 
@@ -279,6 +285,7 @@ void * transporter(void){
               pthread_exit(&error_number);
           }
 
+          // If it has enough stock
           if (stock > 0){
               error = db_factory_get_element_name(ID, name);
 
@@ -287,11 +294,14 @@ void * transporter(void){
                   pthread_exit(&error_number);
               }
 
+              // When there is enough space in the belt
               if (belt_elements < 7){
 
 
                   /* HERE THE TRANSPORTER HAS TO WAIT FOR THE RECEIVER THREAD */
 
+
+                  // The id and the name of the current position object are stored
                   ID = belt[position].id;
                   name = belt[position].name;
 
@@ -306,6 +316,7 @@ void * transporter(void){
                   printf("Introducing element %d, %s in position [%d] with %d number of elements\n", ID, name, position, belt_elements);
                   printf("Exitting thread transporter\n");
 
+                  // The variables need to be updated
                   belt_elements++;
                   transported_elements++;
                   position = (position+1) % MAX_BELT;
@@ -313,6 +324,7 @@ void * transporter(void){
           }
       }
 
+      // The ID is updated, it must be always between 0 and the maximum possible value (16)
       ID = (ID+1) % MAX_DATABASE;
   }
 
@@ -327,7 +339,6 @@ void * receiver(){
   char * name;
   int error = 0;
   int position = 0;
-  int received_elements = 0;
 
   while (received_elements < total_number){
 
@@ -342,6 +353,7 @@ void * receiver(){
       printf("Element %d, %s has been received from position [%d] with %d number of elements\n", belt[position].id, name, position, belt_elements);
       printf("Exitting thread receiver\n");
 
+      // The variables need to be updated 
       belt_elements--;
       received_elements++;
       position = (position+1) % 8;
