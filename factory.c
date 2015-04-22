@@ -60,9 +60,9 @@ int main(int argc, char ** argv){
 
     else {
 		    perror("Invalid syntax: ./factory input_file ");
-		    return 0;
+		    exit(-1);
     }
-	
+
     exit(0);
 }
 
@@ -142,7 +142,6 @@ int init_factory(char *file){
         printf("Total number of elements %d\n", total_number);
 
 
-
         /* CREATION OF THE THREADS */
         int j = 0;
 
@@ -184,29 +183,29 @@ int close_factory(){
     int i = 0;
     int error = 0;
 
-    // Close the database
-    error = db_factory_close();
-    if (error != 0){
-        perror("Error when closing the database\n");
-    }
-
-
     /* FINALIZATION OF THE THREADS */
 
     // Closing inserters thread
     while (i < number_inserters){
-        pthread_join ((pthread_t)(i*sizeof(pthread_t) + inserters), NULL);
+        pthread_join ((pthread_t)(i*sizeof(pthread_t) + inserters), NULL); // INSTEAD OF NULL WRITE &ERROR?????
         i++;
     }
 
     // Closing transporter thread
-    pthread_join ((pthread_t)transporters, NULL);
+    pthread_join ((pthread_t)transporters, NULL); // INSTEAD OF NULL WRITE &ERROR?????
 
     i = 0;
     // Closing receivers thread
     while (i < number_receivers){
-        pthread_join ((pthread_t)(i*sizeof(pthread_t) + receivers), NULL);
+        pthread_join ((pthread_t)(i*sizeof(pthread_t) + receivers), NULL); // INSTEAD OF NULL WRITE &ERROR?????
         i++;
+    }
+
+
+    // Close the database
+    error = db_factory_close();
+    if (error != 0){
+        perror("Error when closing the database\n");
     }
 
     return 0;
@@ -225,7 +224,7 @@ void * inserter(void * data){
     int error = 0;
 
     // Creation of the elements
-    while (i < data[0]){
+    while (i < (int) &data[0]){
         error = db_factory_create_element("Element", 1, &ID);
 
         if (error != 0){
@@ -234,7 +233,7 @@ void * inserter(void * data){
         }
 
         // If the "i" element needs to be updated, the stock passed as argument in "data[2]" is added
-        if (i < data[1]){
+        if (i < (int) &data[1]){
             error = db_factory_get_stock(ID, &stock);
 
             if (error != 0){
@@ -242,7 +241,7 @@ void * inserter(void * data){
                 pthread_exit(&error_number);
             }
 
-            error = db_factory_update_stock(ID, (stock + data[2]));
+            error = db_factory_update_stock(ID, (stock + (int) &data[2]));
 
             if (error != 0){
                 perror("Error when updating the stock of the elements");
@@ -263,7 +262,7 @@ void * inserter(void * data){
 void * transporter(void){
 
   int status, stock;
-  char * name;
+  char * name = NULL;
   int ID = 0;
   int error = 0;
   int position = 0;
@@ -336,7 +335,7 @@ void * transporter(void){
 /* Function execute by the receiver thread */
 void * receiver(){
 
-  char * name;
+  char * name = NULL;
   int error = 0;
   int position = 0;
 
