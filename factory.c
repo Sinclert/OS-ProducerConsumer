@@ -51,7 +51,7 @@ int main(int argc, char ** argv){
     }
 
     else {
-		    perror("Invalid syntax: ./factory input_file");
+		    perror("Invalid syntax: ./factory input_file ");
 		    return 0;
     }
 	
