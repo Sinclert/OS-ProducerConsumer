@@ -46,8 +46,8 @@ int number_inserters = 0;
 // Number of threads for receive
 int number_receivers = 0;
 
-pthread_t * transporters;
 pthread_t * inserters;
+pthread_t * transporters;
 pthread_t * receivers;
 
 
@@ -71,8 +71,7 @@ int main(int argc, char ** argv){
 /* Function that parses the input file and initializes all structures and resources */
 int init_factory(char *file){
 
-    int i = 0;
-    int error = 0;
+    int i, error = 0;
 
     int * number_elements;
     int * number_modified_elements;
@@ -98,7 +97,7 @@ int init_factory(char *file){
         }
 
 
-        /* Allocation of memory */
+        /* ALLOCATION OF MEMORY */
 
         // Number of elements that are going to be inserted by each thread
         number_elements = (int *) malloc(sizeof(int)*number_inserters);
@@ -114,7 +113,7 @@ int init_factory(char *file){
         receivers = (pthread_t *) malloc(sizeof(pthread_t)*number_receivers);
 
         // Reading elements depending on number of inserters
-        for (i=0 ; i< number_inserters ; i++){
+        for (i = 0 ; i < number_inserters ; i++){
             error = fscanf(filefd, "%d %d %d", &number_elements[i], &number_modified_elements[i], &number_modified_stock[i]);
 
             if (error != 3 || number_modified_elements[i] > number_elements[i]){
@@ -124,12 +123,12 @@ int init_factory(char *file){
         }
 
         // Total number of elements that will be in the database
-        for (i=0 ; i<number_inserters ; i++){
+        for (i = 0 ; i < number_inserters ; i++){
             total_number += number_elements[i] + (number_modified_elements[i]*number_modified_stock[i]);
         }
 
 
-        // Init the database
+        // Initialization of the database
         error = db_factory_init();	
         if (error != 0){
 	           perror("Error when initializing the database\n");
@@ -140,28 +139,24 @@ int init_factory(char *file){
         
         /* CREATION OF THE THREADS */
         int insertion_args [number_inserters][3];
-        int j = 0;
 
         // Inserter threads creation
-        while (j < number_inserters){
+        for (i = 0 ; i < number_inserters ; i++){
 
             // Each row of the "insertion_args" matrix stores the elements to create, modify and the stock to add of each thread
-            insertion_args[j][0] = number_elements[j];
-            insertion_args[j][1] = number_modified_elements[j];
-            insertion_args[j][2] = number_modified_stock[j];
+            insertion_args[i][0] = number_elements[i];
+            insertion_args[i][1] = number_modified_elements[i];
+            insertion_args[i][2] = number_modified_stock[i];
 
-            pthread_create ((j*sizeof(pthread_t) + inserters), NULL, (void*) inserter, &insertion_args[j]);
-            j++;
+            pthread_create (&inserters[i], NULL, (void*) inserter, &insertion_args[i]);
         }
 
         // Transporter thread creation
         pthread_create (transporters, NULL, (void*) transporter, NULL);
-        j = 0;
 
         // Receiver threads creation
-        while (j < number_receivers){
-            pthread_create ((j*sizeof(pthread_t) + receivers), NULL, (void*) receiver, NULL);
-            j++;
+        for (i = 0 ; i < number_receivers ; i++){
+            pthread_create (&receivers[i], NULL, (void*) receiver, NULL);
         }
 
         return 0;
@@ -177,27 +172,20 @@ int init_factory(char *file){
 /* Function that closes and free the resources used by the factory */
 int close_factory(){
 
-    int i = 0;
-    int error = 0;
-
-    /* FINALIZATION OF THE THREADS */
+    int i, error = 0;
 
     // Closing inserters thread
-    while (i < number_inserters){
-        pthread_join ((pthread_t)(i*sizeof(pthread_t) + inserters), NULL); // INSTEAD OF NULL WRITE &ERROR?????
-        i++;
+    for (i = 0 ; i < number_inserters ; i++){
+        pthread_join (inserters[i], NULL); // INSTEAD OF NULL WRITE &ERROR?????
     }
 
     // Closing transporter thread
-    pthread_join ((pthread_t)transporters, NULL); // INSTEAD OF NULL WRITE &ERROR?????
+    pthread_join (transporters[0], NULL); // INSTEAD OF NULL WRITE &ERROR?????
 
-    i = 0;
     // Closing receivers thread
-    while (i < number_receivers){
-        pthread_join ((pthread_t)(i*sizeof(pthread_t) + receivers), NULL); // INSTEAD OF NULL WRITE &ERROR?????
-        i++;
+    for (i = 0 ; i < number_receivers ; i++){
+        pthread_join (receivers[i], NULL); // INSTEAD OF NULL WRITE &ERROR?????
     }
-
 
     // Close the database
     error = db_factory_destroy();
@@ -219,9 +207,9 @@ void * inserter(void * data){
     int ID, stock;
     int i = 0;
     int error = 0;
+    int * dataArr = (int*) data;
 
     // Creation of the elements
-    int* dataArr = (int*)data;
     while (i < dataArr[0]){
         error = db_factory_create_element("Element", 1, &ID);
 
