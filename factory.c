@@ -79,10 +79,6 @@ int init_factory(char *file){
     int * number_modified_stock;
 
 
-    /* DOUBLE POINTER NEEDED TO PASS AN ONLY ARGUMENT TO THE INSERTION THREADS */
-    int ** insertion_args = NULL;
-
-
     if (file != NULL){
 
         FILE * filefd = fopen(file, "r");
@@ -141,8 +137,9 @@ int init_factory(char *file){
 
         printf("Total number of elements %d\n", total_number);
 
-
+        
         /* CREATION OF THE THREADS */
+        int insertion_args [number_inserters][3];
         int j = 0;
 
         // Inserter threads creation
@@ -314,7 +311,6 @@ void * transporter(void){
 
                   // To be printed when inserted in the belt
                   printf("Introducing element %d, %s in position [%d] with %d number of elements\n", ID, name, position, belt_elements);
-                  printf("Exitting thread transporter\n");
 
                   // The variables need to be updated
                   belt_elements++;
@@ -328,6 +324,7 @@ void * transporter(void){
       ID = (ID+1) % MAX_DATABASE;
   }
 
+  printf("Exitting thread transporter\n");
   pthread_exit(&correct_number);
 }
 
@@ -351,7 +348,6 @@ void * receiver(){
 
       // To be printed when an element is received
       printf("Element %d, %s has been received from position [%d] with %d number of elements\n", belt[position].id, name, position, belt_elements);
-      printf("Exitting thread receiver\n");
 
       // The variables need to be updated 
       belt_elements--;
@@ -359,5 +355,6 @@ void * receiver(){
       position = (position+1) % 8;
   }
 
+  printf("Exitting thread receiver\n");
   pthread_exit(&correct_number);
 }
