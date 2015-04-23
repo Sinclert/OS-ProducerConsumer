@@ -203,7 +203,7 @@ int close_factory(){
 
 
     // Close the database
-    error = db_factory_close();
+    error = db_factory_destroy();
     if (error != 0){
         perror("Error when closing the database\n");
     }
@@ -224,7 +224,8 @@ void * inserter(void * data){
     int error = 0;
 
     // Creation of the elements
-    while (i < (int) &data[0]){
+    int* dataArr = (int*)data;
+    while (i < dataArr[0]){
         error = db_factory_create_element("Element", 1, &ID);
 
         if (error != 0){
@@ -233,7 +234,7 @@ void * inserter(void * data){
         }
 
         // If the "i" element needs to be updated, the stock passed as argument in "data[2]" is added
-        if (i < (int) &data[1]){
+        if (i < dataArr[1]){
             error = db_factory_get_stock(ID, &stock);
 
             if (error != 0){
@@ -241,7 +242,7 @@ void * inserter(void * data){
                 pthread_exit(&error_number);
             }
 
-            error = db_factory_update_stock(ID, (stock + (int) &data[2]));
+            error = db_factory_update_stock(ID, (stock + dataArr[2]));
 
             if (error != 0){
                 perror("Error when updating the stock of the elements");
@@ -268,7 +269,7 @@ void * transporter(void){
   int position = 0;
 
   while (transported_elements < total_number){
-      error = db_get_ready_state(ID, &status);
+      error = db_factory_get_ready_state(ID, &status);
 
       if (error != 0){
           perror("Error when checking the state of the elements");
