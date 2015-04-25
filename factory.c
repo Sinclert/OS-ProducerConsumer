@@ -247,8 +247,8 @@ void * inserter(void * data){
 /* Function executed by the thread transporter */
 void * transporter(void){
 
-  int status, stock;
-  char * name = NULL;
+  int i, status, stock;
+  char * name = malloc(255);
   int ID = 0;
   int error = 0;
   int position = 0;
@@ -287,8 +287,11 @@ void * transporter(void){
 
 
                   // The id and the name of the current position object are stored
-                  ID = belt[position].id;
-                  name = belt[position].name;
+                  belt[position].id = ID;
+                  
+                  for (i = 0 ; i < 255 ; i++){
+                      belt[position].name[i] = name[i];
+                  }
 
                   error = db_factory_update_stock(ID, (stock -1));
 
