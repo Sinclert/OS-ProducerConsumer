@@ -39,11 +39,6 @@ int belt_elements = 0;
 int transported_elements = 0;
 int received_elements = 0;
 
-// Variables needed to perform the synchronization
-pthread_cond_t space = PTHREAD_COND_INITIALIZER;
-pthread_cond_t item = PTHREAD_COND_INITIALIZER;
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
 
 // Number of threads for transport
 int number_transporters = 0;
@@ -143,7 +138,7 @@ int init_factory(char *file){
         printf("Total number of elements %d\n", total_number);
 
         
-        /* CREATION AND DESTRUCTION OF THE THREADS */
+        /* CREATION OF THE THREADS */
         int insertion_args [number_inserters][3];
 
         // Inserter threads creation
@@ -157,21 +152,24 @@ int init_factory(char *file){
             pthread_create (&inserters[i], NULL, (void*) inserter, &insertion_args[i]);
         }
 
-        // Closing inserters thread
-        for (i = 0 ; i < number_inserters ; i++){
-            pthread_join (inserters[i], NULL);
-        }
-
         // Transporter thread creation
         pthread_create (transporters, NULL, (void*) transporter, NULL);
-
-        // Closing transporter thread
-        pthread_join (transporters[0], NULL);
 
         // Receiver threads creation
         for (i = 0 ; i < number_receivers ; i++){
             pthread_create (&receivers[i], NULL, (void*) receiver, NULL);
         }
+
+
+        /* DESTRUCTION OF THE THREADS */
+
+        // Closing inserters thread
+        for (i = 0 ; i < number_inserters ; i++){
+            pthread_join (inserters[i], NULL);
+        }
+        
+        // Closing transporter thread
+        pthread_join (transporters[0], NULL);
 
         // Closing receivers thread
         for (i = 0 ; i < number_receivers ; i++){
@@ -286,19 +284,6 @@ void * transporter(void){
                   pthread_exit(&error_number);
               }
 
-
-              /* WAIT OPERATION */
-              while (spaces == 0) {
-                  printf("Full store!\n");
-
-                  // The wait makes the pthread suspended until a signal is reached from the other pthread
-                  pthread_cond_wait(&space, &mutex);               
-              }
-
-
-              /* LOCK */
-              pthread_mutex_lock(&mutex);
-
               // The id and the name of the current position object are stored
               belt[position].id = ID;
                   
@@ -321,14 +306,6 @@ void * transporter(void){
               belt_elements++;
               transported_elements++;
               position = (position+1) % MAX_BELT;
-
-
-              /* ACTIVATE RECEIVER */
-              pthread_cond_signal(&item);
-
-
-              /* UNLOCK */
-              pthread_mutex_unlock(&mutex);
           }
       }
 
@@ -336,8 +313,8 @@ void * transporter(void){
       ID = (ID+1) % MAX_DATABASE;
   }
 
-  printf("Exitting thread transporter\n");
   free (name);
+  printf("Exitting thread transporter\n");
   pthread_exit(&correct_number);
 }
 
@@ -359,19 +336,6 @@ void * receiver(){
           pthread_exit(&error_number);
       }
 
-
-      /* LOCK */
-      pthread_mutex_lock(&mutex);
-
-
-      /* WAIT OPERATION */
-      while (belt_elements == 0) {
-        printf("Empty store!\n");
-
-        // The wait makes the pthread suspended until a signal is reached from the other pthread
-        pthread_cond_wait(&item, &mutex);
-      }
-
       // To be printed when an element is received
       printf("Element %d, %s has been received from position [%d] with %d number of elements\n", belt[position].id, name, position, belt_elements);
 
@@ -380,18 +344,9 @@ void * receiver(){
       belt_elements--;
       received_elements++;
       position = (position+1) % 8;
-
-
-      /* ACTIVATE TRANSPORTER */
-      if (belt_elements == MAX_BELT-1){
-          pthread_cond_signal(&space);
-      }
-
-
-      /* UNLOCK */
-      pthread_mutex_unlock(&mutex);
   }
 
+  free (name);
   printf("Exitting thread receiver\n");
   pthread_exit(&correct_number);
 }
