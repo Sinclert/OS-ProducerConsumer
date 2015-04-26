@@ -316,6 +316,7 @@ void * transporter(void){
   }
 
   printf("Exitting thread transporter\n");
+  free (name);
   pthread_exit(&correct_number);
 }
 

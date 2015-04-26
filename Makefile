@@ -27,7 +27,7 @@ all:  $(OBJECTS)
 	@echo "                              Compiling "
 	@echo -n "                              "
 	@echo -n "Concurent example [.."
-	@$(CC) factory.c $(MYFLAGS) $(MYHEADERS) $(MYLIBS) -o factory.o
+	@$(CC) factory.c $(MYFLAGS) $(MYHEADERS) $(MYLIBS) -o factory.exe
 	@echo "..]"
 	@echo "                              Example compiled successfully!"
 	@echo ""
@@ -36,7 +36,7 @@ all:  $(OBJECTS)
 	@echo "                              Compiling "
 	@echo -n "                              "
 	@echo -n "Concurent example [.."
-	@$(CC) factory.c $(MYFLAGS) $(MYHEADERS) $(MYLIBS32) -o factory.o
+	@$(CC) factory.c $(MYFLAGS) $(MYHEADERS) $(MYLIBS32) -o factory.exe
 	@echo "..]"
 	@echo "                              Example compiled successfully!"
 	@echo ""
