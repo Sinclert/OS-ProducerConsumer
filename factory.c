@@ -143,7 +143,7 @@ int init_factory(char *file){
         printf("Total number of elements %d\n", total_number);
 
         
-        /* CREATION OF THE THREADS */
+        /* CREATION AND DESTRUCTION OF THE THREADS */
         int insertion_args [number_inserters][3];
 
         // Inserter threads creation
@@ -157,12 +157,25 @@ int init_factory(char *file){
             pthread_create (&inserters[i], NULL, (void*) inserter, &insertion_args[i]);
         }
 
+        // Closing inserters thread
+        for (i = 0 ; i < number_inserters ; i++){
+            pthread_join (inserters[i], NULL);
+        }
+
         // Transporter thread creation
         pthread_create (transporters, NULL, (void*) transporter, NULL);
+
+        // Closing transporter thread
+        pthread_join (transporters[0], NULL);
 
         // Receiver threads creation
         for (i = 0 ; i < number_receivers ; i++){
             pthread_create (&receivers[i], NULL, (void*) receiver, NULL);
+        }
+
+        // Closing receivers thread
+        for (i = 0 ; i < number_receivers ; i++){
+            pthread_join (receivers[i], NULL);
         }
 
         return 0;
@@ -178,20 +191,7 @@ int init_factory(char *file){
 /* Function that closes and free the resources used by the factory */
 int close_factory(){
 
-    int i, error = 0;
-
-    // Closing inserters thread
-    for (i = 0 ; i < number_inserters ; i++){
-        pthread_join (inserters[i], NULL); // INSTEAD OF NULL WRITE &ERROR?????
-    }
-
-    // Closing transporter thread
-    pthread_join (transporters[0], NULL); // INSTEAD OF NULL WRITE &ERROR?????
-
-    // Closing receivers thread
-    for (i = 0 ; i < number_receivers ; i++){
-        pthread_join (receivers[i], NULL); // INSTEAD OF NULL WRITE &ERROR?????
-    }
+    int error = 0;
 
     // Close the database
     error = db_factory_destroy();
@@ -214,6 +214,7 @@ void * inserter(void * data){
     int i = 0;
     int error = 0;
     int * dataArr = (int*) data;
+
 
     // Creation of the elements
     while (i < dataArr[0]){
@@ -305,15 +306,15 @@ void * transporter(void){
                   belt[position].name[i] = name[i];
               }
 
+              // To be printed when inserted in the belt
+              printf("Introducing element %d, %s in position [%d] with %d number of elements\n", ID, name, position, belt_elements);
+
               error = db_factory_update_stock(ID, (stock-1));
 
               if (error != 0){
                   perror("Error when updating the stock of the elements");
                   pthread_exit(&error_number);
               }
-
-              // To be printed when inserted in the belt
-              printf("Introducing element %d, %s in position [%d] with %d number of elements\n", ID, name, position, belt_elements);
 
               // The variables need to be updated
               spaces--;
@@ -323,7 +324,7 @@ void * transporter(void){
 
 
               /* ACTIVATE RECEIVER */
-              pthread_cond_signal(&item); // REVISAR !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+              pthread_cond_signal(&item);
 
 
               /* UNLOCK */
@@ -345,7 +346,7 @@ void * transporter(void){
 /* Function execute by the receiver thread */
 void * receiver(){
 
-  char * name = NULL;
+  char * name = malloc(255);
   int error = 0;
   int position = 0;
 
