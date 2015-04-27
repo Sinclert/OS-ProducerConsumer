@@ -32,7 +32,6 @@ int correct_number = 0;
 int total_number = 0;
 
 // Number of elements and spaces on the belt
-int spaces = MAX_BELT;
 int belt_elements = 0;
 
 // Control variables to know where to exit a thread
@@ -191,6 +190,10 @@ int close_factory(){
 
     int error = 0;
 
+    free(inserters);
+    free(transporters);
+    free(receivers);
+
     // Close the database
     error = db_factory_destroy();
     if (error != 0){
@@ -302,7 +305,6 @@ void * transporter(void){
               }
 
               // The variables need to be updated
-              spaces--;
               belt_elements++;
               transported_elements++;
               position = (position+1) % MAX_BELT;
@@ -339,8 +341,7 @@ void * receiver(){
       // To be printed when an element is received
       printf("Element %d, %s has been received from position [%d] with %d number of elements\n", belt[position].id, name, position, belt_elements);
 
-      // The variables need to be updated 
-      spaces++;
+      // The variables need to be updated
       belt_elements--;
       received_elements++;
       position = (position+1) % 8;
