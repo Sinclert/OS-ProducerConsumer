@@ -229,6 +229,7 @@ void * inserter(void * data){
     // Creation of the elements
     for (i = 0 ; i < dataArr[0] ; i++){
 
+
         /* LOCK */
         pthread_mutex_lock(&mutex);
 
@@ -239,10 +240,9 @@ void * inserter(void * data){
             pthread_exit(&error_number);
         }
 
-        pthread_cond_signal(&write);
-
         /* UNLOCK */
         pthread_mutex_unlock(&mutex);
+
 
         // Update the elements stock
         if (i < dataArr[1]){
@@ -253,20 +253,16 @@ void * inserter(void * data){
                 pthread_exit(&error_number);
             }
 
-            /* LOCK */
-            pthread_mutex_lock(&mutex);                   // AQUI HAY QUE USAR SET_INTERNAL_DATA!!!!!!!!!!!!
-
             // To calculate the new stock, the current one and the input one are added
             error = db_factory_update_stock(ID, (stock + dataArr[2]));
-
-            /* UNLOCK */
-            pthread_mutex_unlock(&mutex);                 // AQUI HAY QUE USAR SET_INTERNAL_DATA!!!!!!!!!!!!
 
             if (error != 0){
                 perror("Error when updating the stock of the elements");
                 pthread_exit(&error_number);
             }
         }
+
+        pthread_cond_signal(&write);
     }
 
     finished_inserters++;
@@ -285,7 +281,7 @@ void * transporter(void){
   int position = 0;
   char * name = malloc(255);
 
-  while (finished_inserters != number_inserters){
+  while (finished_inserters < number_inserters){
       pthread_cond_wait(&write, &mutex);
   }
 
@@ -307,12 +303,11 @@ void * transporter(void){
           }
 
           // If it has enough stock
-          if (stock > 0){
+          while (stock > 0){
 
 
               // It waits until a signal from receiver is reached
-              while (belt_elements == MAX_BELT){
-                  printf("The belt is full!\n");
+              while (belt_elements == 1){
                   pthread_cond_wait(&space, &mutex);               
               }
 
@@ -338,6 +333,13 @@ void * transporter(void){
                   pthread_exit(&error_number);
               }
 
+              error = db_factory_get_stock(ID, &stock);
+
+              if (error != 0){
+                  perror("Error when getting the stock of the elements");
+                  pthread_exit(&error_number);
+              }
+
               // The variables need to be updated
               belt_elements++;
               transported_elements++;
@@ -347,20 +349,24 @@ void * transporter(void){
 
               position = (position+1) % MAX_BELT;
 
-
+              if (transported_elements == total_number){
+                  pthread_cond_broadcast(&item);
+                  printf("HOLA\n");
+                  printf("Exitting thread transporter\n");
+                  pthread_exit(&correct_number);
+              }
               // Signal sended to the receiver thread
               if (belt_elements == 1){
                   pthread_cond_signal(&item);
               }
           }
-      }
 
-      // The ID is updated, it must be always between 0 and the maximum possible value (16)
-      ID = (ID+1) % MAX_DATABASE;
+          // The ID is updated
+          ID++;
+      }
   }
 
   free (name);
-  pthread_cond_broadcast(&item);
   printf("Exitting thread transporter\n");
   pthread_exit(&correct_number);
 }
@@ -373,22 +379,16 @@ void * receiver(){
   char * name = malloc(255);
   int error = 0;
 
-
-  /* LOCK */
-  pthread_mutex_lock(&mutex);
-      
-  // It waits until a signal from receiver is reached
-  while (belt_elements == 0 && received_elements < total_number){
-      printf("The belt is empty!\n");
-      pthread_cond_wait(&item, &mutex);
-  }
-
-
   while (received_elements < total_number){
 
-      if (received_elements == transported_elements){
-          pthread_mutex_unlock(&mutex);
-          break;
+
+      /* LOCK */
+      pthread_mutex_lock(&mutex);
+      
+      // It waits until a signal from receiver is reached
+      while (belt_elements == 0){
+          pthread_cond_wait(&item, &mutex);
+
       }
 
       error = db_factory_get_element_name(belt[received_position].id, name);
