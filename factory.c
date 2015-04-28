@@ -349,12 +349,6 @@ void * transporter(void){
 
               position = (position+1) % MAX_BELT;
 
-              if (transported_elements == total_number){
-                  pthread_cond_broadcast(&item);
-                  printf("HOLA\n");
-                  printf("Exitting thread transporter\n");
-                  pthread_exit(&correct_number);
-              }
               // Signal sended to the receiver thread
               if (belt_elements == 1){
                   pthread_cond_signal(&item);
