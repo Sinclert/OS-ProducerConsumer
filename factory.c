@@ -288,7 +288,7 @@ void * transporter(void){
 
 
               // It waits until a signal from receiver is reached
-              while (spaces == 0){
+              while (belt_elements == MAX_BELT){
                   printf("The belt is full!\n");
                   pthread_cond_wait(&space, &mutex);               
               }
@@ -327,7 +327,7 @@ void * transporter(void){
 
               // Signal sended to the receiver thread
               if (belt_elements == 1){
-                  pthread_cond_broadcast(&item);
+                  pthread_cond_signal(&item);
               }
           }
       }
@@ -337,6 +337,7 @@ void * transporter(void){
   }
 
   free (name);
+  pthread_cond_broadcast(&item);
   printf("Exitting thread transporter\n");
   pthread_exit(&correct_number);
 }
@@ -360,6 +361,11 @@ void * receiver(){
       while (belt_elements == 0 && received_elements < total_number){
           printf("The belt is empty!\n");
           pthread_cond_wait(&item, &mutex);
+      }
+
+      if (received_elements == transported_elements){
+          pthread_mutex_unlock(&mutex);
+          break;
       }
 
 
