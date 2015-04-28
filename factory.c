@@ -281,9 +281,15 @@ void * transporter(void){
   int position = 0;
   char * name = malloc(255);
 
+
+  /* LOCK */
+  pthread_mutex_lock(&mutex);
+
+  // It waits until a signal from inserter is reached
   while (finished_inserters < number_inserters){
       pthread_cond_wait(&write, &mutex);
   }
+
 
   while (transported_elements < total_number){
       error = db_factory_get_ready_state(ID, &status);
@@ -307,7 +313,7 @@ void * transporter(void){
 
 
               // It waits until a signal from receiver is reached
-              while (belt_elements == 1){
+              while (belt_elements == MAX_BELT){
                   pthread_cond_wait(&space, &mutex);               
               }
 
@@ -349,10 +355,19 @@ void * transporter(void){
 
               position = (position+1) % MAX_BELT;
 
-              // Signal sended to the receiver thread
-              if (belt_elements == 1){
+
+              // Signal sended to the receiver thread once an element is transported
+              if (belt_elements > 0){
                   pthread_cond_signal(&item);
               }
+
+              // Signal sended to the receiver thread in the last iteration
+              if (transported_elements == total_number){
+                  pthread_cond_broadcast(&item);
+              }
+
+              /* UNLOCK */
+              pthread_mutex_unlock(&mutex);
           }
 
           // The ID is updated
@@ -373,17 +388,25 @@ void * receiver(){
   char * name = malloc(255);
   int error = 0;
 
+
+  /* LOCK */
+  pthread_mutex_lock(&mutex);
+
   while (received_elements < total_number){
 
 
-      /* LOCK */
-      pthread_mutex_lock(&mutex);
-      
       // It waits until a signal from receiver is reached
-      while (belt_elements == 0){
+      while (belt_elements == 0 && received_elements < total_number){
           pthread_cond_wait(&item, &mutex);
 
+          // When transported has finished, it just breaks the loop
+          if (received_elements == total_number){
+              pthread_mutex_unlock(&mutex);
+              printf("Exitting thread receiver\n");
+              pthread_exit(&correct_number);
+          }
       }
+
 
       error = db_factory_get_element_name(belt[received_position].id, name);
 
@@ -403,7 +426,7 @@ void * receiver(){
 
 
       // Signal sended to the transporter thread
-      if (belt_elements < MAX_BELT){
+      if (belt_elements == MAX_BELT-1){
           pthread_cond_signal(&space);
       }
 
