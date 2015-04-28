@@ -27,16 +27,24 @@ struct object belt[MAX_BELT];
 /* GLOBAL VARIABLES */
 int error_number = -1;
 int correct_number = 0;
+char names [16][10] = {"Element-0", "Element-1", "Element-2", "Element-3", "Element-4", "Element-5", "Element-6", "Element-7",
+                      "Element-8", "Element-9", "Element-10", "Element-11", "Element-12", "Element-13", "Element-14", "Element-15"};
 
 // Total number of elements to be transported and already transported at a time
 int total_number = 0;
 
 // Number of elements and spaces on the belt
+int spaces = MAX_BELT;
 int belt_elements = 0;
 
 // Control variables to know where to exit a thread
 int transported_elements = 0;
 int received_elements = 0;
+
+// Synchronization variables
+pthread_cond_t space = PTHREAD_COND_INITIALIZER;
+pthread_cond_t item = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 // Number of threads for transport
@@ -190,9 +198,9 @@ int close_factory(){
 
     int error = 0;
 
-    free(inserters);
-    free(transporters);
-    free(receivers);
+    free (inserters);
+    free (transporters);
+    free (receivers);
 
     // Close the database
     error = db_factory_destroy();
@@ -211,39 +219,36 @@ int close_factory(){
 void * inserter(void * data){
 
     /* To be completed for concurrency */
-    int ID, stock;
-    int i = 0;
+    int i, ID, stock;
     int error = 0;
     int * dataArr = (int*) data;
 
-
     // Creation of the elements
-    while (i < dataArr[0]){
-        error = db_factory_create_element("Element", 1, &ID);
+    for (i = 0 ; i < dataArr[0] ; i++){
+        error = db_factory_create_element(names[i], 1, &ID);
 
         if (error != 0){
             perror("Error when creating the elements");
             pthread_exit(&error_number);
         }
+    }
 
-        // If the "i" element needs to be updated, the stock passed as argument in "data[2]" is added
-        if (i < dataArr[1]){
-            error = db_factory_get_stock(ID, &stock);
+    // Update of the elements stock
+    for (i = 0 ; i < dataArr[1] ; i++){
+        error = db_factory_get_stock(ID, &stock);
 
-            if (error != 0){
-                perror("Error when getting the stock of the elements");
-                pthread_exit(&error_number);
-            }
-
-            error = db_factory_update_stock(ID, (stock + dataArr[2]));
-
-            if (error != 0){
-                perror("Error when updating the stock of the elements");
-                pthread_exit(&error_number);
-            }
+        if (error != 0){
+            perror("Error when getting the stock of the elements");
+            pthread_exit(&error_number);
         }
-    
-        i++;
+
+        // To calculate the new stock, the current one and the input one are added
+        error = db_factory_update_stock(ID, (stock + dataArr[2]));
+
+        if (error != 0){
+            perror("Error when updating the stock of the elements");
+            pthread_exit(&error_number);
+        }
     }
 
     printf("Exitting inserter thread\n");
@@ -256,10 +261,10 @@ void * inserter(void * data){
 void * transporter(void){
 
   int i, status, stock;
-  char * name = malloc(255);
   int ID = 0;
   int error = 0;
   int position = 0;
+  char * name = malloc(255);
 
   while (transported_elements < total_number){
       error = db_factory_get_ready_state(ID, &status);
@@ -280,6 +285,15 @@ void * transporter(void){
 
           // If it has enough stock
           if (stock > 0){
+
+
+              // It waits until a signal from receiver is reached
+              while (spaces == 0){
+                  printf("The belt is full!\n");
+                  pthread_cond_wait(&space, &mutex);               
+              }
+
+
               error = db_factory_get_element_name(ID, name);
 
               if (error != 0){
@@ -294,9 +308,6 @@ void * transporter(void){
                   belt[position].name[i] = name[i];
               }
 
-              // To be printed when inserted in the belt
-              printf("Introducing element %d, %s in position [%d] with %d number of elements\n", ID, name, position, belt_elements);
-
               error = db_factory_update_stock(ID, (stock-1));
 
               if (error != 0){
@@ -307,7 +318,17 @@ void * transporter(void){
               // The variables need to be updated
               belt_elements++;
               transported_elements++;
+              
+              // To be printed when inserted in the belt
+              printf("Introducing element %d, %s in position [%d] with %d number of elements\n", ID, name, position, belt_elements);
+
               position = (position+1) % MAX_BELT;
+
+
+              // Signal sended to the receiver thread
+              if (belt_elements == 1){
+                  pthread_cond_broadcast(&item);
+              }
           }
       }
 
@@ -331,6 +352,17 @@ void * receiver(){
 
   while (received_elements < total_number){
 
+
+      /* LOCK */
+      pthread_mutex_lock(&mutex);
+      
+      // It waits until a signal from receiver is reached
+      while (belt_elements == 0 && received_elements < total_number){
+          printf("The belt is empty!\n");
+          pthread_cond_wait(&item, &mutex);
+      }
+
+
       error = db_factory_get_element_name(belt[position].id, name);
 
       if (error != 0){
@@ -338,13 +370,23 @@ void * receiver(){
           pthread_exit(&error_number);
       }
 
-      // To be printed when an element is received
-      printf("Element %d, %s has been received from position [%d] with %d number of elements\n", belt[position].id, name, position, belt_elements);
-
       // The variables need to be updated
       belt_elements--;
       received_elements++;
-      position = (position+1) % 8;
+
+      // To be printed when an element is received
+      printf("Element %d, %s has been received from position [%d] with %d number of elements\n", belt[position].id, name, position, belt_elements);
+
+      position = (position+1) % MAX_BELT;
+
+
+      // Signal sended to the transporter thread
+      if (belt_elements < MAX_BELT){
+          pthread_cond_broadcast(&space);
+      }
+
+      /* UNLOCK */
+      pthread_mutex_unlock(&mutex);
   }
 
   free (name);
