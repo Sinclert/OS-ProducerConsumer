@@ -33,13 +33,15 @@ char names [16][10] = {"Element-0", "Element-1", "Element-2", "Element-3", "Elem
 // Total number of elements to be transported and already transported at a time
 int total_number = 0;
 
-// Number of elements and spaces on the belt
-int spaces = MAX_BELT;
+// Number of elements on the belt
 int belt_elements = 0;
 
 // Control variables to know where to exit a thread
 int transported_elements = 0;
 int received_elements = 0;
+
+// Current position of receivers
+int received_position = 0;
 
 // Synchronization variables
 pthread_cond_t space = PTHREAD_COND_INITIALIZER;
@@ -349,7 +351,6 @@ void * receiver(){
 
   char * name = malloc(255);
   int error = 0;
-  int position = 0;
 
   while (received_elements < total_number){
 
@@ -369,7 +370,7 @@ void * receiver(){
       }
 
 
-      error = db_factory_get_element_name(belt[position].id, name);
+      error = db_factory_get_element_name(belt[received_position].id, name);
 
       if (error != 0){
           perror("Error when getting the name of the elements");
@@ -381,14 +382,14 @@ void * receiver(){
       received_elements++;
 
       // To be printed when an element is received
-      printf("Element %d, %s has been received from position [%d] with %d number of elements\n", belt[position].id, name, position, belt_elements);
+      printf("Element %d, %s has been received from position [%d] with %d number of elements\n", belt[received_position].id, name, received_position, belt_elements);
 
-      position = (position+1) % MAX_BELT;
+      received_position = (received_position+1) % MAX_BELT;
 
 
       // Signal sended to the transporter thread
       if (belt_elements < MAX_BELT){
-          pthread_cond_broadcast(&space);
+          pthread_cond_signal(&space);
       }
 
       /* UNLOCK */
