@@ -132,16 +132,25 @@ int init_factory(char *file){
             }
         }
 
+        // Variable to check that the number of elements to insert is at most 16
+        int diff_elements = 0;
+
         // Total number of elements that will be in the database
         for (i = 0 ; i < number_inserters ; i++){
             total_number += number_elements[i] + (number_modified_elements[i]*number_modified_stock[i]);
+            diff_elements += number_elements[i];
+
+            if (diff_elements > 16){
+                printf("The maximum number of elements to introduce in the database is 16\n");
+                exit(-1);
+            }
         }
 
 
         // Initialization of the database
         error = db_factory_init();	
         if (error != 0){
-	           perror("Error when initializing the database\n");
+            perror("Error when initializing the database\n");
         }
 
         printf("Total number of elements %d\n", total_number);
