@@ -35,6 +35,7 @@ int total_number = 0;
 int belt_elements = 0;
 
 // Control variables to know where to exit a thread
+int created_elements = 0;
 int transported_elements = 0;
 int received_elements = 0;
 
@@ -52,7 +53,6 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 int number_transporters = 0;
 // Number of threads for insert
 int number_inserters = 0;
-int finished_inserters = 0;
 // Number of threads for receive
 int number_receivers = 0;
 
@@ -238,10 +238,6 @@ void * inserter(void * data){
             pthread_exit((void *) -1);
         }
 
-        /* UNLOCK */
-        pthread_mutex_unlock(&mutex);
-
-
         // Update the elements stock
         if (i < dataArr[1]){
             error = db_factory_get_stock(ID, &stock);
@@ -260,10 +256,14 @@ void * inserter(void * data){
             }
         }
 
+        // created_elements help us to know when the transporter must wait for the receivers
+        created_elements = created_elements + stock + dataArr[2];
         pthread_cond_signal(&write);
+
+        /* UNLOCK */
+        pthread_mutex_unlock(&mutex);
     }
 
-    finished_inserters++;
     printf("Exitting inserter thread\n");
     pthread_exit((void *) 0);
 }
@@ -279,22 +279,22 @@ void * transporter(void){
   int position = 0;
   char * name = malloc(255);
 
-
-  /* LOCK */
-  pthread_mutex_lock(&mutex);
-
-  // It waits until a signal from inserter is reached
-  while (finished_inserters < number_inserters){
-      pthread_cond_wait(&write, &mutex);
-  }
-
-
   while (transported_elements < total_number){
+
+
+      /* LOCK */
+      pthread_mutex_lock(&mutex);
+
+      // It waits until a signal from inserter is reached
+      while (created_elements == transported_elements){
+          pthread_cond_wait(&write, &mutex);
+      }
 
       // It waits until a signal from receiver is reached
       while (belt_elements == MAX_BELT){
           pthread_cond_wait(&space, &mutex);               
       }
+
 
       error = db_factory_get_ready_state(ID, &status);
 
@@ -313,7 +313,7 @@ void * transporter(void){
           }
 
           // If it has enough stock and space
-          while (stock > 0){
+          while (stock > 0 && belt_elements < MAX_BELT){
 
               error = db_factory_get_element_name(ID, name);
 
@@ -362,12 +362,10 @@ void * transporter(void){
               pthread_mutex_unlock(&mutex);
           }
 
-          // The ID is updated
-          ID++;
-      }
-
-      else {
-          break;
+          // The ID is updated if we went out of the loop because there is no more stock
+          if (belt_elements != MAX_BELT){
+              ID++;
+          }
       }
   }
 
@@ -389,9 +387,9 @@ void * receiver(){
   
   while (received_elements < total_number){
 
+
       /* LOCK */
       pthread_mutex_lock(&mutex);
-
 
       // It waits until a signal from receiver is reached
       while (belt_elements == 0 && received_elements < total_number){
