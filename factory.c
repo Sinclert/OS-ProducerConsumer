@@ -39,7 +39,7 @@ int transported_elements = 0;
 int received_elements = 0;
 
 // Current position of receivers
-int received_position = 0;
+int receiver_position = 0;
 
 // Synchronization variables
 pthread_cond_t space = PTHREAD_COND_INITIALIZER;
@@ -313,7 +313,7 @@ void * transporter(void){
           }
 
           // If it has enough stock and space
-          while (stock > 0 && belt_elements < MAX_BELT){
+          while (stock > 0){
 
               error = db_factory_get_element_name(ID, name);
 
@@ -386,7 +386,7 @@ void * receiver(){
 
   char * name = malloc(255);
   int error = 0;
-
+  
   while (received_elements < total_number){
 
       /* LOCK */
@@ -396,18 +396,12 @@ void * receiver(){
       // It waits until a signal from receiver is reached
       while (belt_elements == 0 && received_elements < total_number){
           pthread_cond_wait(&item, &mutex);
-
-          if (received_elements == total_number){
-              pthread_mutex_unlock(&mutex);
-              printf("Exitting thread receiver\n");
-              pthread_exit((void *) 0);
-          }
       }
 
 
       if (belt_elements > 0){
 
-          error = db_factory_get_element_name(belt[received_position].id, name);
+          error = db_factory_get_element_name(belt[receiver_position].id, name);
 
           if (error != 0){
               perror("Error when getting the name of the elements");
@@ -419,9 +413,9 @@ void * receiver(){
           received_elements++;
 
           // To be printed when an element is received
-          printf("Element %d, %s has been received from position [%d] with %d number of elements\n", belt[received_position].id, name, received_position, belt_elements);
+          printf("Element %d, %s has been received from position [%d] with %d number of elements\n", belt[receiver_position].id, name, receiver_position, belt_elements);
 
-          received_position = (received_position+1) % MAX_BELT;
+          receiver_position = (receiver_position+1) % MAX_BELT;
 
 
           // Signal sended to the transporter thread
