@@ -25,8 +25,6 @@ struct object belt[MAX_BELT];
 
 
 /* GLOBAL VARIABLES */
-int error_number = -1;
-int correct_number = 0;
 char names [16][10] = {"Element-0", "Element-1", "Element-2", "Element-3", "Element-4", "Element-5", "Element-6", "Element-7",
                       "Element-8", "Element-9", "Element-10", "Element-11", "Element-12", "Element-13", "Element-14", "Element-15"};
 
@@ -237,7 +235,7 @@ void * inserter(void * data){
 
         if (error != 0){
             perror("Error when creating the elements");
-            pthread_exit(&error_number);
+            pthread_exit((void *) -1);
         }
 
         /* UNLOCK */
@@ -250,7 +248,7 @@ void * inserter(void * data){
 
             if (error != 0){
                 perror("Error when getting the stock of the elements");
-                pthread_exit(&error_number);
+                pthread_exit((void *) -1);
             }
 
             // To calculate the new stock, the current one and the input one are added
@@ -258,7 +256,7 @@ void * inserter(void * data){
 
             if (error != 0){
                 perror("Error when updating the stock of the elements");
-                pthread_exit(&error_number);
+                pthread_exit((void *) -1);
             }
         }
 
@@ -267,7 +265,7 @@ void * inserter(void * data){
 
     finished_inserters++;
     printf("Exitting inserter thread\n");
-    pthread_exit(&correct_number);
+    pthread_exit((void *) 0);
 }
 
 
@@ -292,11 +290,17 @@ void * transporter(void){
 
 
   while (transported_elements < total_number){
+
+      // It waits until a signal from receiver is reached
+      while (belt_elements == MAX_BELT){
+          pthread_cond_wait(&space, &mutex);               
+      }
+
       error = db_factory_get_ready_state(ID, &status);
 
       if (error != 0){
           perror("Error when checking the state of the elements");
-          pthread_exit(&error_number);
+          pthread_exit((void *) -1);
       }
 
       // If the element is ready to be transported
@@ -305,30 +309,23 @@ void * transporter(void){
 
           if (error != 0){
               perror("Error when getting the stock of the elements");
-              pthread_exit(&error_number);
+              pthread_exit((void *) -1);
           }
 
-          // If it has enough stock
-          while (stock > 0){
-
-
-              // It waits until a signal from receiver is reached
-              while (belt_elements == MAX_BELT){
-                  pthread_cond_wait(&space, &mutex);               
-              }
-
+          // If it has enough stock and space
+          while (stock > 0 && belt_elements < MAX_BELT){
 
               error = db_factory_get_element_name(ID, name);
 
               if (error != 0){
                   perror("Error when getting the name of the elements");
-                  pthread_exit(&error_number);
+                  pthread_exit((void *) -1);
               }
 
               // The id and the name of the current position object are stored
               belt[position].id = ID;
                   
-              for (i = 0 ; i < 255 ; i++){
+              for (i = 0 ; name[i] != '\0' ; i++){
                   belt[position].name[i] = name[i];
               }
 
@@ -336,14 +333,14 @@ void * transporter(void){
 
               if (error != 0){
                   perror("Error when updating the stock of the elements");
-                  pthread_exit(&error_number);
+                  pthread_exit((void *) -1);
               }
 
               error = db_factory_get_stock(ID, &stock);
 
               if (error != 0){
                   perror("Error when getting the stock of the elements");
-                  pthread_exit(&error_number);
+                  pthread_exit((void *) -1);
               }
 
               // The variables need to be updated
@@ -361,11 +358,6 @@ void * transporter(void){
                   pthread_cond_signal(&item);
               }
 
-              // Signal sended to the receiver thread in the last iteration
-              if (transported_elements == total_number){
-                  pthread_cond_broadcast(&item);
-              }
-
               /* UNLOCK */
               pthread_mutex_unlock(&mutex);
           }
@@ -373,11 +365,18 @@ void * transporter(void){
           // The ID is updated
           ID++;
       }
+
+      else {
+          break;
+      }
   }
+
+  // Signal sended to the receiver thread in the last iteration
+  pthread_cond_broadcast(&item);
 
   free (name);
   printf("Exitting thread transporter\n");
-  pthread_exit(&correct_number);
+  pthread_exit((void *) 0);
 }
 
 
@@ -388,46 +387,47 @@ void * receiver(){
   char * name = malloc(255);
   int error = 0;
 
-
-  /* LOCK */
-  pthread_mutex_lock(&mutex);
-
   while (received_elements < total_number){
+
+      /* LOCK */
+      pthread_mutex_lock(&mutex);
 
 
       // It waits until a signal from receiver is reached
       while (belt_elements == 0 && received_elements < total_number){
           pthread_cond_wait(&item, &mutex);
 
-          // When transported has finished, it just breaks the loop
           if (received_elements == total_number){
               pthread_mutex_unlock(&mutex);
               printf("Exitting thread receiver\n");
-              pthread_exit(&correct_number);
+              pthread_exit((void *) 0);
           }
       }
 
 
-      error = db_factory_get_element_name(belt[received_position].id, name);
+      if (belt_elements > 0){
 
-      if (error != 0){
-          perror("Error when getting the name of the elements");
-          pthread_exit(&error_number);
-      }
+          error = db_factory_get_element_name(belt[received_position].id, name);
 
-      // The variables need to be updated
-      belt_elements--;
-      received_elements++;
+          if (error != 0){
+              perror("Error when getting the name of the elements");
+              pthread_exit((void *) -1);
+          }
 
-      // To be printed when an element is received
-      printf("Element %d, %s has been received from position [%d] with %d number of elements\n", belt[received_position].id, name, received_position, belt_elements);
+          // The variables need to be updated
+          belt_elements--;
+          received_elements++;
 
-      received_position = (received_position+1) % MAX_BELT;
+          // To be printed when an element is received
+          printf("Element %d, %s has been received from position [%d] with %d number of elements\n", belt[received_position].id, name, received_position, belt_elements);
+
+          received_position = (received_position+1) % MAX_BELT;
 
 
-      // Signal sended to the transporter thread
-      if (belt_elements == MAX_BELT-1){
-          pthread_cond_signal(&space);
+          // Signal sended to the transporter thread
+          if (belt_elements == MAX_BELT-1){
+              pthread_cond_signal(&space);
+          }  
       }
 
       /* UNLOCK */
@@ -436,5 +436,5 @@ void * receiver(){
 
   free (name);
   printf("Exitting thread receiver\n");
-  pthread_exit(&correct_number);
+  pthread_exit((void *) 0);
 }
