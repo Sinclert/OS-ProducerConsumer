@@ -209,9 +209,16 @@ int close_factory(){
 
     int error = 0;
 
+    // Thread pointers released
     free (inserters);
     free (transporters);
     free (receivers);
+
+    // Control variables destruction
+    pthread_cond_destroy(&space);
+    pthread_cond_destroy(&item);
+    pthread_cond_destroy(&write);
+    pthread_mutex_destroy(&mutex);
 
     // Close the database
     error = db_factory_destroy();
@@ -247,6 +254,13 @@ void * inserter(void * data){
             pthread_exit((void *) -1);
         }
 
+        // This variable help us to know when the transporter must wait for the receivers
+        created_elements++;
+
+        /* UNLOCK */
+        pthread_mutex_unlock(&mutex);
+
+
         // Update the elements stock
         if (i < dataArr[1]){
             error = db_factory_get_stock(ID, &stock);
@@ -263,14 +277,11 @@ void * inserter(void * data){
                 perror("Error when updating the stock of the elements");
                 pthread_exit((void *) -1);
             }
+
+            created_elements = created_elements + dataArr[2];
         }
 
-        // created_elements help us to know when the transporter must wait for the receivers
-        created_elements = created_elements + stock + dataArr[2];
         pthread_cond_signal(&write);
-
-        /* UNLOCK */
-        pthread_mutex_unlock(&mutex);
     }
 
     printf("Exitting inserter thread\n");
