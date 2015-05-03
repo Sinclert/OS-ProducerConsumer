@@ -92,6 +92,12 @@ int init_factory(char *file){
     if (file != NULL){
 
         FILE * filefd = fopen(file, "r");
+
+        if (filefd == NULL){
+            perror("Error opening the file\n");
+            exit(-1);
+        }
+
         error = fscanf(filefd, "%d", &number_inserters);
         printf("Number inserters %d\n", number_inserters);
 
@@ -199,7 +205,7 @@ int init_factory(char *file){
     }
 
     else {
-        return -1;
+        exit(-1);
     }
 }
 
