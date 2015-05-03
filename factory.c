@@ -314,6 +314,9 @@ void * transporter(void){
           pthread_cond_wait(&space, &mutex);               
       }
 
+      /* UNLOCK */
+      pthread_mutex_unlock(&mutex);
+
 
       error = db_factory_get_ready_state(ID, &status);
 
@@ -341,7 +344,7 @@ void * transporter(void){
                   pthread_exit((void *) -1);
               }
 
-              // The id and the name of the current position object are stored
+              // The ID and the name of the current position object are stored
               belt[position].id = ID;
                   
               for (i = 0 ; name[i] != '\0' ; i++){
@@ -362,6 +365,10 @@ void * transporter(void){
                   pthread_exit((void *) -1);
               }
 
+
+              /* LOCK */
+              pthread_mutex_lock(&mutex);
+
               // The variables need to be updated
               belt_elements++;
               transported_elements++;
@@ -371,11 +378,13 @@ void * transporter(void){
 
               position = (position+1) % MAX_BELT;
 
-
               // Signal sended to the receiver thread once an element is transported
               if (belt_elements > 0){
                   pthread_cond_signal(&item);
               }
+
+              /* UNLOCK */
+              pthread_mutex_unlock(&mutex);
           }
 
           // The ID is updated if we went out of the loop because there is no more stock
@@ -388,9 +397,6 @@ void * transporter(void){
       else {
           ID = 0;
       }
-
-      /* UNLOCK */
-      pthread_mutex_unlock(&mutex);
   }
 
   // Signal sended to the receiver thread in the last iteration
