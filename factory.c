@@ -97,6 +97,7 @@ int init_factory(char *file){
 
         if (error != 1){
             perror("Error reading from file\n");
+            exit(-1);
         }
 
         number_transporters = 1;
@@ -105,6 +106,7 @@ int init_factory(char *file){
 
         if (error != 1){
             perror("Error reading from file\n");
+            exit(-1);
         }
 
 
@@ -144,16 +146,16 @@ int init_factory(char *file){
                 exit(-1);
             }
         }
+        
+        printf("Total number of elements %d\n", total_number);
 
         // Initialization of the database
         error = db_factory_init();	
         if (error != 0){
             perror("Error when initializing the database\n");
+            exit(-1);
         }
 
-        printf("Total number of elements %d\n", total_number);
-
-        
         /* CREATION OF THE THREADS */
         int insertion_args [number_inserters][3];
 
