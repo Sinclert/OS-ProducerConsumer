@@ -25,8 +25,9 @@ struct object belt[MAX_BELT];
 
 
 /* GLOBAL VARIABLES */
-char names [16][10] = {"Element-0", "Element-1", "Element-2", "Element-3", "Element-4", "Element-5", "Element-6", "Element-7",
-                      "Element-8", "Element-9", "Element-10", "Element-11", "Element-12", "Element-13", "Element-14", "Element-15"};
+int name = 0;
+char names [16][11] = {"First", "Second", "Third", "Fourth", "Fifth", "Sixth", "Seventh", "Eighth",
+                      "Ninth", "Tenth", "Eleventh", "Twelfth", "Thirteenth", "Fourteenth", "Fifteenth", "Sixteenth"};
 
 // Total number of elements to be transported and already transported at a time
 int total_number = 0;
@@ -247,7 +248,7 @@ void * inserter(void * data){
         /* LOCK */
         pthread_mutex_lock(&mutex);
 
-        error = db_factory_create_element(names[i], 1, &ID);
+        error = db_factory_create_element(names[name], 1, &ID);
 
         if (error != 0){
             perror("Error when creating the elements");
@@ -256,6 +257,7 @@ void * inserter(void * data){
 
         // This variable help us to know when the transporter must wait for the receivers
         created_elements++;
+        name++;
 
         /* UNLOCK */
         pthread_mutex_unlock(&mutex);
@@ -384,9 +386,14 @@ void * transporter(void){
 
           // The ID is updated if we went out of the loop because there is no more stock
           if (belt_elements != MAX_BELT){
-              ID++;
+              ID = (ID+1) % MAX_DATABASE;
           }
       }
+
+      // If an uninitialized ID is found, the ID is restarted
+      else {
+          ID = 0;
+      }    
   }
 
   // Signal sended to the receiver thread in the last iteration
