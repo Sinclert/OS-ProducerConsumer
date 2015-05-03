@@ -145,7 +145,7 @@ int init_factory(char *file){
             }
             
             // Total number of elements that will be in the database
-            total_number += number_elements[i] + (number_modified_elements[i]*number_modified_stock[i]);
+            total_number += number_elements[i] + (number_modified_elements[i] * number_modified_stock[i]);
             diff_elements += number_elements[i];
 
             if (diff_elements > 16){
@@ -301,7 +301,7 @@ void * inserter(void * data){
 /* Function executed by the thread transporter */
 void * transporter(void){
 
-  int i, status, stock;
+  int status, stock;
   int ID = 0;
   int error = 0;
   int position = 0;
@@ -355,10 +355,7 @@ void * transporter(void){
 
               // The ID and the name of the current position object are stored
               belt[position].id = ID;
-                  
-              for (i = 0 ; name[i] != '\0' ; i++){
-                  belt[position].name[i] = name[i];
-              }
+              strcpy(belt[position].name, name);
 
               error = db_factory_update_stock(ID, (stock-1));
 
