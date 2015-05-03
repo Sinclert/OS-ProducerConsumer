@@ -379,9 +379,6 @@ void * transporter(void){
               if (belt_elements > 0){
                   pthread_cond_signal(&item);
               }
-
-              /* UNLOCK */
-              pthread_mutex_unlock(&mutex);
           }
 
           // The ID is updated if we went out of the loop because there is no more stock
@@ -393,7 +390,10 @@ void * transporter(void){
       // If an uninitialized ID is found, the ID is restarted
       else {
           ID = 0;
-      }    
+      }
+
+      /* UNLOCK */
+      pthread_mutex_unlock(&mutex);
   }
 
   // Signal sended to the receiver thread in the last iteration
