@@ -123,6 +123,9 @@ int init_factory(char *file){
         // Pthread_t of each receiver
         receivers = (pthread_t *) malloc(sizeof(pthread_t)*number_receivers);
 
+        // Variable to check that the number of elements to insert is at most 16
+        int diff_elements = 0;
+
         // Reading elements depending on number of inserters
         for (i = 0 ; i < number_inserters ; i++){
             error = fscanf(filefd, "%d %d %d", &number_elements[i], &number_modified_elements[i], &number_modified_stock[i]);
@@ -131,13 +134,8 @@ int init_factory(char *file){
                 perror("Error reading from file\n");
                 exit(-1);
             }
-        }
-
-        // Variable to check that the number of elements to insert is at most 16
-        int diff_elements = 0;
-
-        // Total number of elements that will be in the database
-        for (i = 0 ; i < number_inserters ; i++){
+            
+            // Total number of elements that will be in the database
             total_number += number_elements[i] + (number_modified_elements[i]*number_modified_stock[i]);
             diff_elements += number_elements[i];
 
@@ -146,7 +144,6 @@ int init_factory(char *file){
                 exit(-1);
             }
         }
-
 
         // Initialization of the database
         error = db_factory_init();	
