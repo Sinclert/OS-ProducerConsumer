@@ -125,6 +125,7 @@ int init_factory(char *file){
         // Pthread_t of each receiver
         receivers = (pthread_t *) malloc(sizeof(pthread_t)*number_receivers);
 
+
         // Variable to check that the number of elements to insert is at most 16
         int diff_elements = 0;
 
@@ -150,11 +151,12 @@ int init_factory(char *file){
         printf("Total number of elements %d\n", total_number);
 
         // Initialization of the database
-        error = db_factory_init();	
+        error = db_factory_init();
         if (error != 0){
             perror("Error when initializing the database\n");
             exit(-1);
         }
+
 
         /* CREATION OF THE THREADS */
         int insertion_args [number_inserters][3];
@@ -177,7 +179,6 @@ int init_factory(char *file){
         for (i = 0 ; i < number_receivers ; i++){
             pthread_create (&receivers[i], NULL, (void*) receiver, NULL);
         }
-
 
         /* DESTRUCTION OF THE THREADS */
 
