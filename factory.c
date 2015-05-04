@@ -92,28 +92,28 @@ int init_factory(char *file){
     if (file != NULL){
 
         FILE * filefd = fopen(file, "r");
-
         if (filefd == NULL){
             perror("Error opening the file\n");
             exit(-1);
         }
 
         error = fscanf(filefd, "%d", &number_inserters);
+        if (error != 1){
+            perror("Error reading from file\n");
+            exit(-1);
+        }
+
         printf("Number inserters %d\n", number_inserters);
 
-        if (error != 1){
-            perror("Error reading from file\n");
-            exit(-1);
-        }
-
         number_transporters = 1;
-        error = fscanf(filefd, "%d", &number_receivers);
-        printf("Number receivers %d\n", number_receivers);
 
+        error = fscanf(filefd, "%d", &number_receivers);
         if (error != 1){
             perror("Error reading from file\n");
             exit(-1);
         }
+
+        printf("Number receivers %d\n", number_receivers);
 
 
         /* ALLOCATION OF MEMORY */
