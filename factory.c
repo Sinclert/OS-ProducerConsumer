@@ -261,8 +261,6 @@ void * inserter(void * data){
             pthread_exit((void *) -1);
         }
 
-        // This variable help us to know when the transporter must wait for the receivers
-        created_elements++;
         name++;
 
         /* UNLOCK */
@@ -289,6 +287,8 @@ void * inserter(void * data){
             created_elements = created_elements + dataArr[2];
         }
 
+        // Here we increase the counter of created elements by 1 because of the default stock of each new element
+        created_elements++;
         pthread_cond_signal(&write);
     }
 
@@ -418,8 +418,8 @@ void * transporter(void){
 /* Function execute by the receiver thread */
 void * receiver(){
 
-  char * name = malloc(255);
   int error = 0;
+  char * name = malloc(255);
   
   while (received_elements < total_number){
 
