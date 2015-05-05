@@ -47,6 +47,7 @@ int receiver_position = 0;
 pthread_cond_t space = PTHREAD_COND_INITIALIZER;
 pthread_cond_t item = PTHREAD_COND_INITIALIZER;
 pthread_cond_t write = PTHREAD_COND_INITIALIZER;
+pthread_cond_t receiving = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
@@ -427,11 +428,20 @@ void * receiver(){
       /* LOCK */
       pthread_mutex_lock(&mutex);
 
-      // It waits until a signal from receiver is reached
+      // It waits until a signal from the transporter and from another receiver is reached
       while (belt_elements == 0 && received_elements < total_number){
-          pthread_cond_wait(&item, &mutex);
+
+          if (belt_elements == 0){
+              pthread_cond_wait(&item, &mutex);
+          }
+
+          if (belt_elements == 0 && received_elements > 0 && received_elements < total_number){
+              pthread_cond_wait(&receiving, &mutex);
+          }
       }
 
+      /* UNLOCK */
+      pthread_mutex_unlock(&mutex);
 
       if (belt_elements > 0){
 
@@ -442,6 +452,10 @@ void * receiver(){
               pthread_exit((void *) -1);
           }
 
+
+          /* LOCK */
+          pthread_mutex_lock(&mutex);
+
           // The variables need to be updated
           belt_elements--;
           received_elements++;
@@ -451,15 +465,17 @@ void * receiver(){
 
           receiver_position = (receiver_position+1) % MAX_BELT;
 
-
           // Signal sended to the transporter thread
           if (belt_elements == MAX_BELT-1){
               pthread_cond_signal(&space);
-          }  
-      }
+          }
 
-      /* UNLOCK */
-      pthread_mutex_unlock(&mutex);
+          // Signal sended to other receiver thread
+          pthread_cond_signal(&receiving);
+
+          /* UNLOCK */
+          pthread_mutex_unlock(&mutex);
+      }
   }
 
   free (name);
