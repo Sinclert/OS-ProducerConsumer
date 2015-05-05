@@ -475,18 +475,24 @@ void * receiver(){
 
           receiver_position = (receiver_position+1) % MAX_BELT;
 
+          /* UNLOCK */
+          pthread_mutex_unlock(&mutex);
+
+
           // Signal sended to the transporter thread
           if (belt_elements == MAX_BELT-1){
               pthread_cond_signal(&space);
           }
 
           // Signal sended to other receiver thread
-          pthread_cond_signal(&receiving);
-
-          /* UNLOCK */
-          pthread_mutex_unlock(&mutex);
+          if (belt_elements > 0){
+              pthread_cond_signal(&receiving);
+          }
       }
   }
+
+  // Signal sended to the remaining receivers
+  pthread_cond_broadcast(&receiving);
 
   free (name);
   printf("Exitting thread receiver\n");
