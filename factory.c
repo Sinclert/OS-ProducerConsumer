@@ -32,6 +32,9 @@ char names [16][11] = {"First", "Second", "Third", "Fourth", "Fifth", "Sixth", "
 // Total number of elements to be transported and already transported at a time
 int total_number = 0;
 
+// The structure we are going to use to pass the parameters to the inserters
+int ** insertion_args;
+
 // Number of elements on the belt
 int belt_elements = 0;
 
@@ -61,6 +64,7 @@ int number_receivers = 0;
 pthread_t * inserters;
 pthread_t * transporters;
 pthread_t * receivers;
+
 
 
 int main(int argc, char ** argv){
@@ -166,7 +170,11 @@ int init_factory(char *file){
 
 
         /* CREATION OF THE THREADS */
-        int insertion_args [number_inserters][3];
+        insertion_args = (int **) malloc(number_inserters * sizeof(int*));
+
+        for (i = 0 ; i < number_inserters ; i++){
+            insertion_args[i] = (int *) malloc(3 * sizeof(int));
+        }
 
         // Inserter threads creation
         for (i = 0 ; i < number_inserters ; i++){
@@ -176,7 +184,7 @@ int init_factory(char *file){
             insertion_args[i][1] = number_modified_elements[i];
             insertion_args[i][2] = number_modified_stock[i];
 
-            pthread_create (&inserters[i], NULL, (void*) inserter, &insertion_args[i]);
+            pthread_create (&inserters[i], NULL, (void *) inserter, (void *) insertion_args[i]);
         }
 
         // Transporter thread creation
@@ -185,21 +193,6 @@ int init_factory(char *file){
         // Receiver threads creation
         for (i = 0 ; i < number_receivers ; i++){
             pthread_create (&receivers[i], NULL, (void*) receiver, NULL);
-        }
-
-        /* DESTRUCTION OF THE THREADS */
-
-        // Closing inserters thread
-        for (i = 0 ; i < number_inserters ; i++){
-            pthread_join (inserters[i], NULL);
-        }
-        
-        // Closing transporter thread
-        pthread_join (transporters[0], NULL);
-
-        // Closing receivers thread
-        for (i = 0 ; i < number_receivers ; i++){
-            pthread_join (receivers[i], NULL);
         }
 
         return 0;
@@ -215,9 +208,26 @@ int init_factory(char *file){
 /* Function that closes and free the resources used by the factory */
 int close_factory(){
 
-    int error = 0;
+    int i, error = 0;
 
-    // Thread pointers released
+    /* DESTRUCTION OF THE THREADS */
+
+    // Closing inserters thread
+    for (i = 0 ; i < number_inserters ; i++){
+        pthread_join (inserters[i], NULL);
+    }
+        
+    // Closing transporter thread
+    pthread_join (transporters[0], NULL);
+
+    // Closing receivers thread
+    for (i = 0 ; i < number_receivers ; i++){
+        pthread_join (receivers[i], NULL);
+    }
+
+
+    // Thread pointers and insertion_args matrix released
+    free (insertion_args);
     free (inserters);
     free (transporters);
     free (receivers);
