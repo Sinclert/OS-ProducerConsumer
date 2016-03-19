@@ -4,9 +4,9 @@
 
 The <a href="https://en.wikipedia.org/wiki/Producer–consumer_problem">Producer-Consumer problem</a> is a classic example of a multi-process synchronization problem. It consists of one or more threads producing or inserting elements into a buffer, and one or more threads consuming or taking out them from it. There could be <a href="https://en.wikipedia.org/wiki/Race_condition">race conditions</a> in case there is not a proper synchronization control mechanism.
 
-### How was my implementation?
+### How was our implementation?
 
-My implementation was planified supposing there is a factory, having a warehouse containing different products (up to 16 different products) in stock. The number of elements in stock of a specific product is by default one, but can be updated. Additionally, there are 3 types of workers in the factory, being each of them represented by a type of thread:<br>
+Our implementation was planified supposing there is a factory, having a warehouse containing different products (up to 16 different products) in stock. The number of elements in stock of a specific product is by default one, but can be updated. Additionally, there are 3 types of workers in the factory, being each of them represented by a type of thread:<br>
 <br>
 <b>A) Inserter (one or more):</b> Their task is to initialize the database products that are going to be place in the belt by the transporter (buffer), updating the stock of those which have been indicated. Those stock updates must be protected inside a critical section.
 <br>
