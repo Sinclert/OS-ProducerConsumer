@@ -25,11 +25,11 @@ Folder containing two headers, one of them with the definitions of the factory.c
 Folder containing two static libraries that are going to be used when compiling the code. There is a x32 and a x64 version.
 
 #### 3. Input.txt
-Example of an input file that needs to be introduced as parameter to the compiled file, in order to indicate the number of inserters, the number of receivers, and the updated stocks of the created products.
+Example of an input file that needs to be introduced as parameter to the compiled file, in order to indicate the number of inserters, the number of receivers, and the updated stocks of the created products.<br>
 <br>
 <b>First number:</b> number of inserters.
 <br>
-<b>Second number:</b> number of receivers.<br>
+<b>Second number:</b> number of receivers.
 <br>
 Then, there must be as many lines as inserter threads, indicating in each of them:
 <br>
