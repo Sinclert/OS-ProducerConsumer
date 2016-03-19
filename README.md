@@ -29,7 +29,7 @@ Example of an input file that needs to be introduced as parameter to the compile
 <br>
 <b>First number:</b> number of inserters.
 <br>
-<b>Second number:</b> number of receivers.
+<b>Second number:</b> number of receivers.<br>
 <br>
 Then, there must be as many lines as inserter threads, indicating in each of them:
 <br>
