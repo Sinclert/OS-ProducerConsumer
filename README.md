@@ -18,11 +18,11 @@ In order to solve the synchronization problem, our approach was to use <a href="
 
 ### What is in the repository?
 
-#### 1. include:
+#### 1. include
 Folder containing two headers, one of them with the definitions of the factory.c methods, and the other with several constant definitions such as the number of positions in the belt, or the maximum size of the database.
 
-#### 2. lib:
-Folder containing two static libraries, that are going to be use when compiling the factory.c file. There is a x32 and a x64 version.
+#### 2. lib
+Folder containing two static libraries that are going to be used when compiling the code. There is a x32 and a x64 version.
 
 #### 3. Input.txt
 Example of an input file that needs to be introduced as parameter to the compiled file, in order to indicate the number of inserters, the number of receivers, and the updated stocks of the created products.
