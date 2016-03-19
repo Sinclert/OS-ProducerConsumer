@@ -6,13 +6,13 @@ The <a href="https://en.wikipedia.org/wiki/Producer–consumer_problem">Producer
 ### How was my implementation?
 My implementation was planified supposing there is a factory, having a warehouse containing different products (up to 16 different products) in stock. The number of elements in stock of a specific product is by default one, but can be updated. Additionally, there are 3 types of workers in the factory, being each of them represented by a type of thread:<br>
 <br>
-<b>A) Inserter:</b>  We can create as many inserters threads as we want. Their task is to initialize the database products that are going to be place in the belt by the transporter (buffer), updating the stock of those which have been indicated. Those stock updates must be protected inside a critical section.
+<b>A) Inserter (one or more):</b> Their task is to initialize the database products that are going to be place in the belt by the transporter (buffer), updating the stock of those which have been indicated. Those stock updates must be protected inside a critical section.
 <br>
-<b>B) Transporter:</b> There will be only one of this threads. Its task is to move the products of the database (warehouse) to the belt, printing the information and decreasing one unit from the moved element stock. It is important to keep in mind that there could be moments when there are not free spaces in the transporter belt.
+<b>B) Transporter (just one):</b> Its task is to move the products of the database (warehouse) to the belt, printing the information and decreasing one unit from the moved element stock. It is important to keep in mind that there could be moments when there are not free spaces in the transporter belt.
 <br>
-<b>C) Receiver:</b> We can create as many receivers as we want. Their task is to take out elements from the transporter belt, taking into account that there could be moments where there are no elements in the belt, and some wait will be required.<br>
+<b>C) Receiver (one or more):</b> Their task is to take out elements from the transporter belt, taking into account that there could be moments where there are no elements in the belt, and some wait will be required.<br>
 <br>
-In order to solve the synchronization problem, our approach was to use <a href="https://en.wikipedia.org/wiki/Mutual_exclusion">mutual exclusion</a> variables to control the access to the transporter belt (buffer), however, the belt is not a common array, but a circular array of 8 positions.
+In order to solve the synchronization problem, our approach was to use <a href="https://en.wikipedia.org/wiki/Mutual_exclusion">mutual exclusion</a> variables to control the access to the transporter belt (buffer), however, the belt is not a common array, but a <b>circular array of 8 positions.</b>
 
 ### What is in the repository?
 
@@ -25,27 +25,28 @@ Folder containing two static libraries, that are going to be use when compiling 
 #### 3. Input.txt
 Example of an input file that needs to be introduced as parameter to the compiled file, in order to indicate the number of inserters, the number of receivers, and the stocks of the created products.
 <br>
-First number: number of inserters.
+<b>First number:</b> number of inserters.
 <br>
-Second number: number of receivers.
+<b>Second number:</b> number of receivers.
 <br>
 Then, there must be as many lines as inserter threads, indicating in each of them:
-  1. The number of products created (each one will be created with one unit in stock).<br>
-  2. The number of these products that needs to change its stock.<br>
-  3. The stock that is going to be assigned to those specific products.
+<br>
+<b>1.</b> The number of products created (each one will be created with one unit in stock).<br>
+<b>2.</b> The number of these products that needs to change its stock.<br>
+<b>3.</b> The stock that is going to be assigned to those specific products.
 
 #### 4. Makefile
 File to compile the other repository files. It can be also used to remove the compiled ones.
 
 ```shell
 $ make
-gcc factory.c -Wall -g ./include/ -L./lib/ -ldb_factory -lpthread -o factory.exe
+Compiling
+Concurent example [....]
 Example compiled successfully!
 ```
 
 ```shell
 $ make clean
-rm -f *.o *exe
 Deleted files!
 ```
 
