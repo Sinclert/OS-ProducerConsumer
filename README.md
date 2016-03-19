@@ -59,12 +59,12 @@ Main file of the entire repository, it contains the main methods of the factory 
 $ ./factory.exe <configuration file>
 ```
 
-### Requirements:
-
-This implementation is designed to work in a LINUX operating system. The reasons of this requirement are two: First of all a GCC (GNU Compiler-Compiler) is needed to execute the Makefile and compile the files; and secondly, because the <a href="https://en.wikipedia.org/wiki/System_call">system calls</a> used in during the implementation, could have different names in other operating systems.
-
-
 ### Special considerations:
 
 * <b>All the receiver threads share a common pointer</b> to the belt position in which the next element to be displayed and took out is placed.
+<br><br>
 * The order in which products are obtained from the database and introduced into the transporter belt, is just the following: first all the elements of the first product, then all the elements of the second product...
+
+### Requirements:
+
+This implementation is designed to work in a LINUX operating system. The reasons of this requirement are two: First of all a GCC (GNU Compiler-Compiler) is needed to execute the Makefile and compile the files; and secondly, because the <a href="https://en.wikipedia.org/wiki/System_call">system calls</a> used in during the implementation, could have different names in other operating systems.
