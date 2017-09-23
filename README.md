@@ -65,4 +65,4 @@ $ ./factory.exe <configuration file>
 
 ## Requirements:
 
-These commands are designed to work in a UNIX O.S, macOS does not support this code.
+These commands are designed to work in a Linux O.S, macOS does not support this code.
