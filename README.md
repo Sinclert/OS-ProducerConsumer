@@ -6,11 +6,11 @@ The <a href="https://en.wikipedia.org/wiki/Producer–consumer_problem">Producer
 
 Our implementation was planified supposing there is a factory, having a warehouse containing different products (up to 16 different products) in stock. The number of elements in stock of a specific product is by default one, but can be updated. Additionally, there are 3 types of workers in the factory, being each of them represented by a type of thread:<br>
 <br>
-<b>A) Inserter (one or more):</b> Their task is to initialize the database products that are going to be place in the belt by the transporter (buffer), updating the stock of those which have been indicated.
+<b>A) Inserter (one or more):</b> Initialize the database products that are going to be place in the belt by the transporter (buffer), updating the stock of those which have been indicated.
 <br><br>
-<b>B) Transporter (one):</b> Its task is to move the products of the database (warehouse) to the belt, printing the information and decreasing one unit from the moved element stock.
+<b>B) Transporter (one):</b> Moves the products of the database (warehouse) to the belt, printing the information and decreasing one unit from the moved element stock.
 <br><br>
-<b>C) Receiver (one or more):</b> Their task is to take out elements from the transporter belt, taking into account that there could be moments where there are no elements in the belt, and some wait will be required.<br>
+<b>C) Receiver (one or more):</b> Take out elements from the transporter belt, taking into account that there could be moments where there are no elements in the belt, and some wait will be required.<br>
 <br>
 In order to solve the synchronization problem, our approach was to use <a href="https://en.wikipedia.org/wiki/Mutual_exclusion">mutual exclusion</a> variables to control the access to the transporter belt (buffer), however, the belt is not a common array, but a <b>circular array of 8 positions.</b>
 
