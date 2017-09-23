@@ -65,4 +65,4 @@ $ ./factory.exe <configuration file>
 
 ## Requirements:
 
-This implementation is designed to work in a LINUX operating system. The reasons of this requirement are two: First of all a GCC (GNU Compiler-Compiler) is needed to execute the Makefile and compile the files; and secondly, because the <a href="https://en.wikipedia.org/wiki/System_call">system calls</a> used in during the implementation, could have different names in other operating systems.
+These commands are designed to work in a UNIX O.S, macOS does not support this code.
